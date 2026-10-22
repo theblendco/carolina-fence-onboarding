@@ -81,6 +81,7 @@
 
   // ---------- errors ----------
   function setErr(id, msg, target){
+    msg = ""; // click-through demo: no validation errors
     var p = $("e-" + id); if(p) p.textContent = msg || "";
     if(target){ target.classList.toggle("invalid", !!msg); if(target.tagName === "INPUT" || target.tagName === "TEXTAREA"){ if(msg){ target.setAttribute("aria-invalid","true"); target.setAttribute("aria-describedby","e-"+id); } else target.removeAttribute("aria-invalid"); } }
   }
@@ -131,12 +132,6 @@
       var m = checks[k](); setErr(k, m, k === "cat" ? $("catChips") : F[k]);
       if(m && !first) first = k;
     });
-    if(first){
-      var t = first === "cat" ? $("catChips") : F[first];
-      t.scrollIntoView({behavior:"smooth", block:"center"});
-      if(first !== "cat") setTimeout(function(){ t.focus({preventScroll:true}); }, 350);
-      return;
-    }
     go(2);
   });
 
@@ -159,7 +154,7 @@
       box.appendChild(b);
     });
   }
-  $("weekBtn").addEventListener("click", function(){ if(!state.week){ setErr("week","Pick an install week."); return; } go(10); });
+  $("weekBtn").addEventListener("click", function(){ if(!state.week){ state.week = weeks()[0][0]; save(); } go(10); });
 
   // ---------- 6 pdf ----------
   $("pdfBtn").addEventListener("click", function(){ window.print(); });
@@ -203,8 +198,6 @@
   $("toSign").addEventListener("click", function(){ state.read = true; save(); tab("sign"); });
   $("signForm").addEventListener("submit", function(e){
     e.preventDefault(); var ok = true;
-    if(!hasInk){ setErr("sig", "Draw your signature in the box.", $("sigbox")); ok = false; }
-    if(!state.agree){ setErr("agree", "Check the box to agree to the terms."); ok = false; }
     if(ok) go(8);
   });
   var rt; window.addEventListener("resize", function(){ clearTimeout(rt); rt = setTimeout(function(){ if(state.step === 7 && !$("paneSign").hidden) sizeCanvas(); }, 150); });
@@ -225,6 +218,7 @@
   // ---------- 9 calendar ----------
   var monthOffset = 0;
   function bookable(d){ var t = today(); var max = new Date(t); max.setDate(max.getDate() + 45); var w = d.getDay(); return d > t && d <= max && w !== 0 && w !== 6; }
+  function firstOpenDay(){ var d = today(); for(var i = 0; i < 60; i++){ d.setDate(d.getDate() + 1); if(bookable(d)) return iso(d); } return iso(today()); }
   function buildCal(){
     var t = today(), base = new Date(t.getFullYear(), t.getMonth() + monthOffset, 1, 12);
     $("monthLbl").textContent = base.toLocaleDateString("en-US", {month:"long", year:"numeric"});
@@ -264,8 +258,9 @@
   $("nextM").addEventListener("click", function(){ if(monthOffset < 1){ monthOffset++; buildCal(); } });
   $("bookBtn").addEventListener("click", function(){
     var ok = true;
-    if(!state.day){ setErr("day","Pick a day on the calendar."); ok = false; }
-    if(!state.time){ setErr("time","Pick a time."); ok = false; }
+    if(!state.day || !bookable(parseIso(state.day))) state.day = firstOpenDay();
+    if(!state.time) state.time = TIMES[0];
+    save();
     if(ok) go(5);
   });
 
